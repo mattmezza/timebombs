@@ -1,0 +1,49 @@
+site_name: timebombs
+site_description: timebombs, trying to keep that tech debt low.
+site_url: https://matteo.merola.co/timebombs
+
+theme:
+    name: 'material'
+    palette:
+        primary: 'black'
+        accent: 'teal'
+    icon:
+        repo: fontawesome/brands/github-alt
+    logo: 'img/icon-white.svg'
+    favicon: 'img/favicon.png'
+
+repo_name: mattmezza/timebombs-py
+repo_url: https://github.com/mattmezza/timebombs
+edit_uri: 'https://github.com/mattmezza/timebombs'
+
+nav:
+    - timebombs: 'index.md'
+    - features: 'features.md'
+    - continuous integration: 'continuous-integration.md'
+    - changelog: 'CHANGELOG.md'
+
+markdown_extensions:
+    - toc:
+        permalink: true
+    - markdown.extensions.codehilite:
+        guess_lang: false
+    - markdown_include.include:
+        base_path: docs
+    - admonition
+    - codehilite
+    - extra
+    - pymdownx.superfences:
+        custom_fences:
+            - name: mermaid
+              class: mermaid
+              format: !!python/name:pymdownx.superfences.fence_div_format
+    - pymdownx.tabbed
+
+extra:
+    social:
+        - icon: fontawesome/brands/github-alt
+          link: 'https://github.com/mattmezza/timebombs-py'
+        - icon: fontawesome/brands/twitter
+          link: 'https://twitter.com/_mattmezza_'
+        - icon: fontawesome/brands/linkedin
+          link: 'https://www.linkedin.com/in/matteomerola'

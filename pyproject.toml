@@ -1,0 +1,101 @@
+[tool.poetry]
+name = "timebombs"
+version = "0.1.0"
+description = "A small package to keep tech debt to a minimum."
+authors = ["Matteo Merola"]
+readme = "README.md"
+homepage = "https://github.com/mattmezza/timebombs-py"
+repository = "git@github.com/mattmezza/timebombs-py.git"
+documentation = "https://matteo.merola.co/timebombs-py"
+keywords = ["CI", "continuous integration", "tech debt"]
+classifiers = [
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development",
+    "Typing :: Typed",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License"
+]
+include = ["CHANGELOG.md", "README.md"]
+packages = [
+    { include = "timebombs", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+typer = "^0.3.2"
+
+[tool.poetry.dev-dependencies]
+autoflake = "^1.4"
+black = "^19.10b0"
+flake8 = "^3.8.3"
+freezegun = "^1.0"
+isort = "^5.4.2"
+markdown-include = "^0.5.1"
+mkdocs = "^1.1.2"
+mkdocs-material = "^5.4.0"
+mypy = "^0.782"
+pytest = "^6.0.1"
+pytest-cov = "^2.10.1"
+sphinx = "^3.2.1"
+sphinx-autodoc-typehints = "^1.11.0"
+tox = "^3.7.0"
+wheel = "^0.35.1"
+
+[tool.black]
+line-length = 79
+include ='\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.hg
+  | \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+# compatibility with black
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 79
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+exclude_lines = [
+    'pragma: no cover',
+    'raise NotImplementedError',
+    '\.\.\.',
+    'if __name__ == "__main__":',
+]
+
+[tool.coverage.html]
+directory = './coverage'
+
+[tool.mypy]
+# check https://github.com/python/mypy/issues/5205
+
+[build-system]
+requires = ["poetry>=1.0"]
+build-backend = "poetry.masonry.api"
