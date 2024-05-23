@@ -32,11 +32,11 @@ jobs:
         pip install -r requirements.txt
     - name: Lint
       run: |
-        black src tests --check
-        isort src tests --check-only
+        python -m black src tests --check
+        python -m isort src tests --check-only
     - name: MyPy
       run: |
-        mypy src
+        python -m mypy src
     - name: Test
       run: |
-        pytest tests
+        python -m pytest tests
