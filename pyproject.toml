@@ -4,9 +4,9 @@ version = "0.1.0"
 description = "A small package to keep tech debt to a minimum."
 authors = ["Matteo Merola"]
 readme = "README.md"
-homepage = "https://github.com/mattmezza/timebombs-py"
-repository = "git@github.com/mattmezza/timebombs-py.git"
-documentation = "https://matteo.merola.co/timebombs-py"
+homepage = "https://github.com/mattmezza/timebombs"
+repository = "https://github.com/mattmezza/timebombs"
+documentation = "https://matteo.merola.co/timebombs"
 keywords = ["CI", "continuous integration", "tech debt"]
 classifiers = [
     "Intended Audience :: Information Technology",
@@ -15,10 +15,10 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development",
@@ -33,25 +33,29 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
-typer = "^0.3.2"
+python = ">=3.9,<4.0"
+typer = "^0.12.3"
+pytz = "^2024.1"
 
-[tool.poetry.dev-dependencies]
-autoflake = "^1.4"
-black = "^19.10b0"
-flake8 = "^3.8.3"
-freezegun = "^1.0"
-isort = "^5.4.2"
-markdown-include = "^0.5.1"
-mkdocs = "^1.1.2"
-mkdocs-material = "^5.4.0"
-mypy = "^0.782"
-pytest = "^6.0.1"
-pytest-cov = "^2.10.1"
-sphinx = "^3.2.1"
-sphinx-autodoc-typehints = "^1.11.0"
-tox = "^3.7.0"
-wheel = "^0.35.1"
+[tool.poetry.group.dev.dependencies]
+autoflake = "^2.3.1"
+black = "^24.4.2"
+flake8 = "^7.0"
+freezegun = "^1.5.1"
+isort = "^5.13.2"
+markdown-include = "^0.8.1"
+mkdocs = "^1.6.0"
+mkdocs-material = "^9.5.24"
+mypy = "^1.10.0"
+pytest = "^8.2.1"
+pytest-cov = "^5.0.0"
+sphinx = "^7.3.7"
+sphinx-autodoc-typehints = "^2.1.0"
+tox = "^4.15.0"
+wheel = "^0.43.0"
+
+[tool.poetry.scripts]
+timebombs = "timebombs:__main__"
 
 [tool.black]
 line-length = 79
