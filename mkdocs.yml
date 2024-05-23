@@ -12,7 +12,7 @@ theme:
     logo: 'img/icon-white.svg'
     favicon: 'img/favicon.png'
 
-repo_name: mattmezza/timebombs-py
+repo_name: mattmezza/timebombs
 repo_url: https://github.com/mattmezza/timebombs
 edit_uri: 'https://github.com/mattmezza/timebombs'
 
@@ -42,8 +42,4 @@ markdown_extensions:
 extra:
     social:
         - icon: fontawesome/brands/github-alt
-          link: 'https://github.com/mattmezza/timebombs-py'
-        - icon: fontawesome/brands/twitter
-          link: 'https://twitter.com/_mattmezza_'
-        - icon: fontawesome/brands/linkedin
-          link: 'https://www.linkedin.com/in/matteomerola'
+          link: 'https://github.com/mattmezza/timebombs'
