@@ -36,8 +36,7 @@ jobs:
         isort src tests --check-only
     - name: MyPy
       run: |
-        mypy --install-types
-        mypy src
+        mypy --install-types src
     - name: Test
       run: |
         pytest tests
