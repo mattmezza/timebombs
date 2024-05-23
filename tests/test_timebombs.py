@@ -122,6 +122,12 @@ def test_extreme():
 
 
 def test_main():
-    assert __main__.main("tests", "r_bad", None) == 1
-    assert __main__.main("tests", "r_good", None) == 0
-    assert __main__.main("tests", "r_ugly", "Europe/Amsterdam") == 0
+    with pytest.raises(SystemExit) as ret:
+        __main__.main("tests:r_bad")
+        assert ret.value.code == 1
+    with pytest.raises(SystemExit) as ret:
+        __main__.main("tests:r_good")
+        assert ret.value.code == 0
+    with pytest.raises(SystemExit) as ret:
+        __main__.main("tests:r_ugly", timezone="Europe/Amsterdam")
+        assert ret.value.code == 1
