@@ -39,4 +39,5 @@ jobs:
         mypy --install-types --non-interactive src
     - name: Test
       run: |
+        pip install .
         pytest tests
