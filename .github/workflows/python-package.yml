@@ -28,15 +28,15 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install poetry
-        poetry export --without-hashes --format=requirements.txt > requirements.txt
+        poetry export --with dev --without-hashes --format=requirements.txt > requirements.txt
         pip install -r requirements.txt
     - name: Lint
       run: |
-        python -m black src tests --check
-        python -m isort src tests --check-only
+        black src tests --check
+        isort src tests --check-only
     - name: MyPy
       run: |
-        python -m mypy src
+        mypy src
     - name: Test
       run: |
-        python -m pytest tests
+        pytest tests
