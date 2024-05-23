@@ -1,7 +1,7 @@
 import sys
 from datetime import datetime
 from importlib import import_module
-from typing import Annotated, NoReturn
+from typing import Annotated, NoReturn, Optional
 
 import pytz
 import typer
@@ -63,7 +63,7 @@ def main(
         ),
     ] = datetime.now(),
     timezone: Annotated[
-        str | None,
+        Optional[str],
         typer.Option(
             "--timezone",
             "-t",
