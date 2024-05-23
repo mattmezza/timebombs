@@ -98,7 +98,12 @@ exclude_lines = [
 directory = './coverage'
 
 [tool.mypy]
-# check https://github.com/python/mypy/issues/5205
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "timebombs.*"
+disallow_untyped_defs = false
+strict = true
 
 [build-system]
 requires = ["poetry>=1.0"]
