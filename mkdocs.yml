@@ -17,16 +17,13 @@ repo_url: https://github.com/mattmezza/timebombs
 edit_uri: 'https://github.com/mattmezza/timebombs'
 
 nav:
-    - timebombs: 'index.md'
-    - features: 'features.md'
-    - continuous integration: 'continuous-integration.md'
-    - changelog: 'CHANGELOG.md'
+    - README: 'index.md'
 
 markdown_extensions:
     - toc:
         permalink: true
     - markdown.extensions.codehilite:
-        guess_lang: false
+        guess_lang: true
     - markdown_include.include:
         base_path: docs
     - admonition

@@ -15,7 +15,6 @@ lint:  ## lints src code with mypy, black and isort (--check-only)
 
 .PHONY: docs docs-live
 docs:  ## builds the docs website
-	cp README.md docs/index.md
 	python -m mkdocs build
 docs-live: docs  ## builds and serves the docs website
 	python -m mkdocs serve --dev-addr 127.0.0.1:8008
