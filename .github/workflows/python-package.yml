@@ -31,6 +31,12 @@ jobs:
         poetry export --without-hashes --format=requirements.txt > requirements.txt
         pip install -r requirements.txt
     - name: Lint
-      run: make lint
+      run: |
+        black src tests --check
+        isort src tests --check-only
+    - name: MyPy
+      run: |
+        mypy src
     - name: Test
-      run: make test
+      run: |
+        pytest tests
