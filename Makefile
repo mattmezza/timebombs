@@ -27,3 +27,10 @@ clean:  ## cleans dist and site folders
 .PHONY: test
 test:  ## runs the tests with coverage report
 	pytest --cov=timebombs --cov-report=term-missing --cov-report=xml -o console_output_style=progress tests
+
+.PHONY: release
+release:  ## creates a release on github (e.g. make release name=v0.20)
+	poetry build
+	gh release create $(name) --generate-notes
+	git fetch --all
+	poetry publish
