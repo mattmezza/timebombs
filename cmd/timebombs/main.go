@@ -197,9 +197,9 @@ func render(w io.Writer, bombs []model.Timebomb, format string, now time.Time) e
 		noColor := !isTerminal(w)
 		return output.WriteText(w, bombs, output.TextOptions{Now: now, NoColor: noColor})
 	case "json":
-		return fmt.Errorf("json output: not yet implemented (phase 2)")
+		return output.WriteJSON(w, bombs, now)
 	case "sarif":
-		return fmt.Errorf("sarif output: not yet implemented (phase 2)")
+		return output.WriteSARIF(w, bombs, now, version)
 	default:
 		return fmt.Errorf("unknown --format %q (use text, json, sarif)", format)
 	}
