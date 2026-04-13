@@ -1,0 +1,71 @@
+version: 2
+
+project_name: timebombs
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: timebombs
+    main: ./cmd/timebombs
+    binary: timebombs
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_{{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge pull request"
+
+release:
+  github:
+    owner: mattmezza
+    name: timebombs
+  draft: false
+  prerelease: auto
+
+brews:
+  - name: timebombs
+    repository:
+      owner: mattmezza
+      name: homebrew-tap
+    directory: Formula
+    homepage: "https://github.com/mattmezza/timebombs"
+    description: "Scan codebases for TIMEBOMB annotations — tech debt with deadlines."
+    license: "MIT"
+    test: |
+      system "#{bin}/timebombs", "version"
+    install: |
+      bin.install "timebombs"

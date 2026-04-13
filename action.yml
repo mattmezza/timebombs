@@ -1,0 +1,96 @@
+name: "timebombs"
+description: "Scan a codebase for TIMEBOMB annotations (tech debt with deadlines) and fail CI on exploded bombs."
+branding:
+  icon: "clock"
+  color: "red"
+
+inputs:
+  path:
+    description: "Path to scan."
+    required: false
+    default: "."
+  version:
+    description: "Version of the timebombs CLI to install (e.g. v0.1.0). Defaults to latest."
+    required: false
+    default: "latest"
+  max-exploded:
+    description: "Fail the job if more than N bombs are exploded."
+    required: false
+    default: "0"
+  format:
+    description: "Output format: text, json, or sarif."
+    required: false
+    default: "text"
+  within:
+    description: "Only report bombs within this window (e.g. 30d, 2w). Empty = no filter."
+    required: false
+    default: ""
+  extra-args:
+    description: "Additional CLI args appended verbatim."
+    required: false
+    default: ""
+  upload-sarif:
+    description: "Also generate a SARIF report and upload it to code scanning."
+    required: false
+    default: "false"
+
+outputs:
+  report-path:
+    description: "Path to the SARIF report when upload-sarif is true."
+    value: ${{ steps.scan.outputs.report-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install timebombs
+      shell: bash
+      run: |
+        set -euo pipefail
+        VERSION="${{ inputs.version }}"
+        OS="$(uname -s)"
+        ARCH="$(uname -m)"
+        case "$ARCH" in
+          x86_64|amd64) ARCH=x86_64 ;;
+          aarch64|arm64) ARCH=arm64 ;;
+        esac
+        if [ "$VERSION" = "latest" ]; then
+          URL="https://github.com/mattmezza/timebombs/releases/latest/download/timebombs_${OS}_${ARCH}.tar.gz"
+        else
+          URL="https://github.com/mattmezza/timebombs/releases/download/${VERSION}/timebombs_${OS}_${ARCH}.tar.gz"
+        fi
+        echo "Downloading $URL"
+        curl -fsSL "$URL" | tar -xz -C /usr/local/bin timebombs
+        timebombs version
+
+    - name: Scan
+      id: scan
+      shell: bash
+      run: |
+        set -euo pipefail
+        ARGS=()
+        if [ -n "${{ inputs.within }}" ]; then
+          ARGS+=(--within "${{ inputs.within }}")
+        fi
+        if [ -n "${{ inputs.extra-args }}" ]; then
+          # shellcheck disable=SC2206
+          EXTRA=(${{ inputs.extra-args }})
+          ARGS+=("${EXTRA[@]}")
+        fi
+        timebombs scan "${{ inputs.path }}" \
+          --max-exploded "${{ inputs.max-exploded }}" \
+          --format "${{ inputs.format }}" \
+          "${ARGS[@]}"
+
+    - name: Generate SARIF
+      if: ${{ inputs.upload-sarif == 'true' }}
+      shell: bash
+      run: |
+        timebombs scan "${{ inputs.path }}" --format sarif > timebombs.sarif || true
+        echo "report-path=timebombs.sarif" >> "$GITHUB_OUTPUT"
+
+    - name: Upload SARIF
+      if: ${{ inputs.upload-sarif == 'true' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: timebombs.sarif
+      continue-on-error: true
