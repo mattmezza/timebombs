@@ -1,0 +1,33 @@
+name: timebombs
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install timebombs
+        run: |
+          set -euo pipefail
+          curl -fsSL https://github.com/mattmezza/timebombs/releases/latest/download/timebombs_Linux_x86_64.tar.gz \
+            | tar -xz -C /usr/local/bin timebombs
+          timebombs version
+
+      - name: Scan for exploded timebombs
+        run: timebombs scan . --max-exploded 0 --format text
+
+      - name: Generate SARIF report
+        if: always()
+        run: timebombs scan . --format sarif > timebombs.sarif || true
+
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: timebombs.sarif
+        continue-on-error: true

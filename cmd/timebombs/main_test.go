@@ -133,3 +133,56 @@ func TestCLI_BadAtTime(t *testing.T) {
 		t.Errorf("expected error on bad --at-time")
 	}
 }
+
+func TestCLI_JSONFormat(t *testing.T) {
+	dir := setupFixture(t)
+	out, _, err := runCLI(t, "scan", dir, "--at-time", "2026-04-13", "--format", "json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, `"scanned_at": "2026-04-13"`) {
+		t.Errorf("missing scanned_at: %s", out)
+	}
+	if !strings.Contains(out, `"state": "exploded"`) {
+		t.Errorf("missing state: %s", out)
+	}
+}
+
+func TestCLI_SARIFFormat(t *testing.T) {
+	dir := setupFixture(t)
+	out, _, err := runCLI(t, "scan", dir, "--at-time", "2026-04-13", "--format", "sarif")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, `"version": "2.1.0"`) {
+		t.Errorf("missing sarif version")
+	}
+}
+
+func TestCLI_InitList(t *testing.T) {
+	out, _, err := runCLI(t, "init", "--list")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "claude-code") || !strings.Contains(out, "codex") {
+		t.Errorf("missing agents:\n%s", out)
+	}
+}
+
+func TestCLI_InitAgent(t *testing.T) {
+	dir := t.TempDir()
+	_, _, err := runCLI(t, "init", "--agent", "claude-code", "--root", dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".claude/timebombs.md")); err != nil {
+		t.Errorf("expected skill file: %v", err)
+	}
+}
+
+func TestCLI_InitUnknownAgent(t *testing.T) {
+	_, _, err := runCLI(t, "init", "--agent", "not-a-thing")
+	if err == nil {
+		t.Errorf("expected error for unknown agent")
+	}
+}

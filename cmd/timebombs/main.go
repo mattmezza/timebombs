@@ -13,6 +13,7 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 
+	"github.com/mattmezza/timebombs/internal/initcmd"
 	"github.com/mattmezza/timebombs/internal/model"
 	"github.com/mattmezza/timebombs/internal/output"
 	"github.com/mattmezza/timebombs/internal/scanner"
@@ -55,6 +56,7 @@ func newRootCmd() *cobra.Command {
 	}
 
 	root.AddCommand(newScanCmd())
+	root.AddCommand(newInitCmd())
 	root.AddCommand(newVersionCmd())
 
 	// Default: if args look like paths and first isn't a known command,
@@ -94,6 +96,90 @@ func attachScanFlags(cmd *cobra.Command, f *scanFlags) {
 	cmd.Flags().IntVar(&f.maxExploded, "max-exploded", -1, "Exit non-zero if more than N bombs are exploded")
 	cmd.Flags().StringSliceVar(&f.exclude, "exclude", nil, "Exclude glob (doublestar; repeatable)")
 	cmd.Flags().BoolVar(&f.noGitignore, "no-gitignore", false, "Ignore .gitignore when walking")
+}
+
+type initFlags struct {
+	agent string
+	all   bool
+	list  bool
+	ci    string
+	root  string
+}
+
+func newInitCmd() *cobra.Command {
+	var f initFlags
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "Install the timebombs skill for AI coding agents in this repo.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runInit(cmd, f)
+		},
+	}
+	cmd.Flags().StringVar(&f.agent, "agent", "", "Install for a specific agent (see --list)")
+	cmd.Flags().BoolVar(&f.all, "all", false, "Install for every supported agent")
+	cmd.Flags().BoolVar(&f.list, "list", false, "List supported agents and their install targets")
+	cmd.Flags().StringVar(&f.ci, "ci", "", "Also generate a CI workflow (github-actions)")
+	cmd.Flags().StringVar(&f.root, "root", ".", "Repo root to install into")
+	return cmd
+}
+
+func runInit(cmd *cobra.Command, f initFlags) error {
+	out := cmd.OutOrStdout()
+
+	if f.list {
+		fmt.Fprintln(out, "Supported agents:")
+		for _, a := range initcmd.ListAgents() {
+			fmt.Fprintf(out, "  %-12s  %s\n    target: %s\n", a.ID, a.DisplayName, a.Target)
+		}
+		return nil
+	}
+
+	var targets []initcmd.Agent
+	switch {
+	case f.agent != "" && f.all:
+		return fmt.Errorf("--agent and --all are mutually exclusive")
+	case f.all:
+		targets = initcmd.ListAgents()
+	case f.agent != "":
+		a, ok := initcmd.Lookup(f.agent)
+		if !ok {
+			return fmt.Errorf("unknown agent %q (run `timebombs init --list`)", f.agent)
+		}
+		targets = []initcmd.Agent{a}
+	default:
+		targets = initcmd.DetectInstalled(f.root)
+		if len(targets) == 0 {
+			fmt.Fprintln(out, "No agents auto-detected. Use --agent <id> or --all. See --list.")
+		}
+	}
+
+	for _, a := range targets {
+		res, err := initcmd.InstallForAgent(f.root, a)
+		if err != nil {
+			return fmt.Errorf("install %s: %w", a.ID, err)
+		}
+		switch {
+		case res.Skipped:
+			fmt.Fprintf(out, "  skipped  %s (already installed: %s)\n", a.DisplayName, res.Path)
+		case res.Created:
+			fmt.Fprintf(out, "  created  %s  %s\n", a.DisplayName, res.Path)
+		default:
+			fmt.Fprintf(out, "  appended %s  %s\n", a.DisplayName, res.Path)
+		}
+	}
+
+	if f.ci != "" {
+		res, err := initcmd.InstallCI(f.root, f.ci)
+		if err != nil {
+			return err
+		}
+		if res.Skipped {
+			fmt.Fprintf(out, "  skipped  CI workflow (already present: %s)\n", res.Path)
+		} else {
+			fmt.Fprintf(out, "  created  CI workflow  %s\n", res.Path)
+		}
+	}
+	return nil
 }
 
 func newVersionCmd() *cobra.Command {
