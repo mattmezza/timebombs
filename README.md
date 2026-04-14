@@ -61,6 +61,9 @@ src/poller.ts
 | Filter by ticket prefix. | `timebombs scan . --id JIRA-` |
 | Give me JSON. | `timebombs scan . --format json` |
 | Give me SARIF. | `timebombs scan . --format sarif` |
+| Only scan what changed in this PR. | `timebombs scan . --changed-only --base origin/main` |
+| Allowlist certain files. | `timebombs scan . --include '**/*.go'` |
+| Scan one file from a hook. | `cat file.py \| timebombs scan --stdin --stdin-filename file.py` |
 
 ## CI integration
 

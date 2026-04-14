@@ -80,6 +80,8 @@ Common queries and their flag equivalents:
 | How much debt total? | `timebombs scan .` |
 | What will explode by a date? | `timebombs scan . --at-time 2026-06-01` |
 | Show a specific area's debt. | `timebombs scan ./src/payments` |
+| Only scan what changed in this PR. | `timebombs scan . --changed-only --base origin/main` |
+| Allowlist file types. | `timebombs scan . --include '**/*.go' --include '**/*.py'` |
 | Give me JSON. | `timebombs scan . --format json` |
 
 ### Interpreting CI failures
