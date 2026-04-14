@@ -104,7 +104,7 @@ Drops `.github/workflows/timebombs.yml` that fails the build on any exploded bom
 ### GitHub Actions (reusable action)
 
 ```yaml
-- uses: mattmezza/timebombs@v1
+- uses: mattmezza/timebombs@v0.5.0
   with:
     path: .
     max-exploded: 0
