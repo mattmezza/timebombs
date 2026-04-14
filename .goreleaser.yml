@@ -56,16 +56,6 @@ release:
   draft: false
   prerelease: auto
 
-brews:
-  - name: timebombs
-    repository:
-      owner: mattmezza
-      name: homebrew-tap
-    directory: Formula
-    homepage: "https://github.com/mattmezza/timebombs"
-    description: "Scan codebases for TIMEBOMB annotations — tech debt with deadlines."
-    license: "MIT"
-    test: |
-      system "#{bin}/timebombs", "version"
-    install: |
-      bin.install "timebombs"
+# Homebrew tap publishing is intentionally disabled until a homebrew-tap
+# repo exists. Re-enable by adding a `brews:` block here once
+# github.com/mattmezza/homebrew-tap is created and a release PAT is set.

@@ -12,12 +12,6 @@ In the era of AI coding agents shipping at unprecedented velocity, teams need a 
 
 ## Install
 
-### Homebrew
-
-```bash
-brew install mattmezza/tap/timebombs
-```
-
 ### Binary releases
 
 Grab the latest binary for your platform from the [releases page](https://github.com/mattmezza/timebombs/releases).

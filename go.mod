@@ -1,6 +1,6 @@
 module github.com/mattmezza/timebombs
 
-go 1.26.1
+go 1.25.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0
