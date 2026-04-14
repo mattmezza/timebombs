@@ -20,6 +20,19 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # Self-dogfood: run timebombs against its own repo. Excludes are
+      # required because docs, fixtures, and parser tests embed example
+      # TIMEBOMB() annotations inside markdown / raw-string literals that
+      # the language-agnostic scanner would otherwise flag.
+      - name: Self-scan
+        run: |
+          go build -o bin/timebombs ./cmd/timebombs
+          ./bin/timebombs scan . \
+            --max-exploded 0 \
+            --exclude '**/*.md' \
+            --exclude 'testdata/**' \
+            --exclude '**/*_test.go'
+
   lint:
     runs-on: ubuntu-latest
     steps:
