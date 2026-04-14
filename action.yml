@@ -1,4 +1,4 @@
-name: "timebombs"
+name: "timebombs-action"
 description: "Scan a codebase for TIMEBOMB annotations (tech debt with deadlines) and fail CI on exploded bombs."
 branding:
   icon: "clock"
