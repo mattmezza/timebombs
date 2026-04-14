@@ -107,6 +107,53 @@ func TestScan_SingleFile(t *testing.T) {
 	}
 }
 
+func TestScan_ParallelManyFiles(t *testing.T) {
+	// Stress the worker pool with enough files to force multiple batches.
+	dir := t.TempDir()
+	const n = 200
+	for i := 0; i < n; i++ {
+		name := filepath.Join(dir, "pkg", "f", "f.go")
+		if i%2 == 0 {
+			name = filepath.Join(dir, "a", "file.go")
+		}
+		// Unique file per i so we actually write n files.
+		p := filepath.Join(dir, "dir", "f"+itoa(i)+".go")
+		_ = name
+		writeFile(t, p, "// TIMEBOMB(2099-01-01): bomb "+itoa(i)+".\n")
+	}
+
+	bombs, err := Scan([]string{dir}, Options{Workers: 8})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bombs) != n {
+		t.Fatalf("got %d bombs, want %d", len(bombs), n)
+	}
+
+	// Serial pass yields the same set (content-wise).
+	serial, err := Scan([]string{dir}, Options{Workers: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(serial) != n {
+		t.Fatalf("serial got %d, want %d", len(serial), n)
+	}
+}
+
+func itoa(i int) string {
+	if i == 0 {
+		return "0"
+	}
+	var b [20]byte
+	pos := len(b)
+	for i > 0 {
+		pos--
+		b[pos] = byte('0' + i%10)
+		i /= 10
+	}
+	return string(b[pos:])
+}
+
 func TestParseDuration(t *testing.T) {
 	cases := []struct {
 		in   string

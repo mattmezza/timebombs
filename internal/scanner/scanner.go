@@ -6,7 +6,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/bmatcuk/doublestar/v4"
 	ignore "github.com/sabhiram/go-gitignore"
@@ -27,6 +29,9 @@ type Options struct {
 	UseGitignore bool
 	// MaxFileSize skips files larger than this many bytes (0 = no limit).
 	MaxFileSize int64
+	// Workers controls the number of parallel file-parse workers. 0 means
+	// runtime.NumCPU(). 1 forces serial processing.
+	Workers int
 }
 
 // DefaultMaxFileSize is the default upper bound on a scanned file's size.
@@ -74,10 +79,35 @@ func scanRoot(root string, opts Options) ([]model.Timebomb, error) {
 		}
 	}
 
-	var out []model.Timebomb
-	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, werr error) error {
+	workers := opts.Workers
+	if workers <= 0 {
+		workers = runtime.NumCPU()
+	}
+
+	jobs := make(chan string, workers*4)
+	var (
+		mu  sync.Mutex
+		out []model.Timebomb
+		wg  sync.WaitGroup
+	)
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for path := range jobs {
+				bombs, ferr := scanFile(path, path, opts)
+				if ferr != nil || len(bombs) == 0 {
+					continue
+				}
+				mu.Lock()
+				out = append(out, bombs...)
+				mu.Unlock()
+			}
+		}()
+	}
+
+	walkErr := filepath.WalkDir(root, func(path string, d fs.DirEntry, werr error) error {
 		if werr != nil {
-			// Skip unreadable dirs/files; don't abort whole scan.
 			if d != nil && d.IsDir() {
 				return filepath.SkipDir
 			}
@@ -114,15 +144,13 @@ func scanRoot(root string, opts Options) ([]model.Timebomb, error) {
 			return nil
 		}
 
-		bombs, ferr := scanFile(path, path, opts)
-		if ferr != nil {
-			return nil // ignore individual file errors
-		}
-		out = append(out, bombs...)
+		jobs <- path
 		return nil
 	})
-	if err != nil {
-		return nil, err
+	close(jobs)
+	wg.Wait()
+	if walkErr != nil {
+		return nil, walkErr
 	}
 	return out, nil
 }
