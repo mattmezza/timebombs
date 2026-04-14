@@ -15,8 +15,8 @@ import (
 
 // TextOptions controls text rendering.
 type TextOptions struct {
-	Now      time.Time
-	NoColor  bool
+	Now        time.Time
+	NoColor    bool
 	WithinDays int // used to decide "soon" highlighting; defaults to 30 if 0
 }
 
