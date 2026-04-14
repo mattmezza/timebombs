@@ -19,6 +19,10 @@ type Options struct {
 	// Exclude is a list of user-provided glob patterns (doublestar syntax)
 	// evaluated against the path relative to each scan root.
 	Exclude []string
+	// Include, when non-empty, restricts the scan to files matching any of
+	// these globs. Directories are always traversed (subject to Exclude and
+	// gitignore); the allowlist only gates leaf files.
+	Include []string
 	// UseGitignore enables .gitignore-aware filtering.
 	UseGitignore bool
 	// MaxFileSize skips files larger than this many bytes (0 = no limit).
@@ -106,6 +110,9 @@ func scanRoot(root string, opts Options) ([]model.Timebomb, error) {
 		if matchAnyGlob(opts.Exclude, rel) {
 			return nil
 		}
+		if len(opts.Include) > 0 && !matchAnyGlob(opts.Include, rel) {
+			return nil
+		}
 
 		bombs, ferr := scanFile(path, path, opts)
 		if ferr != nil {
@@ -121,6 +128,12 @@ func scanRoot(root string, opts Options) ([]model.Timebomb, error) {
 }
 
 func matchAnyGlob(patterns []string, path string) bool {
+	return MatchAny(patterns, path)
+}
+
+// MatchAny reports whether path matches any of the doublestar patterns.
+// Exposed so callers outside the scanner can apply the same matching rules.
+func MatchAny(patterns []string, path string) bool {
 	path = filepath.ToSlash(path)
 	for _, p := range patterns {
 		ok, err := doublestar.PathMatch(p, path)

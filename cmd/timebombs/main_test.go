@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -34,11 +35,19 @@ func mustWrite(t *testing.T, p, content string) {
 
 func runCLI(t *testing.T, args ...string) (stdout, stderr string, err error) {
 	t.Helper()
+	return runCLIStdin(t, nil, args...)
+}
+
+func runCLIStdin(t *testing.T, stdin []byte, args ...string) (stdout, stderr string, err error) {
+	t.Helper()
 	root := newRootCmd()
 	var outBuf, errBuf bytes.Buffer
 	root.SetOut(&outBuf)
 	root.SetErr(&errBuf)
 	root.SetArgs(args)
+	if stdin != nil {
+		root.SetIn(bytes.NewReader(stdin))
+	}
 	err = root.Execute()
 	return outBuf.String(), errBuf.String(), err
 }
@@ -184,5 +193,83 @@ func TestCLI_InitUnknownAgent(t *testing.T) {
 	_, _, err := runCLI(t, "init", "--agent", "not-a-thing")
 	if err == nil {
 		t.Errorf("expected error for unknown agent")
+	}
+}
+
+func TestCLI_Stdin(t *testing.T) {
+	in := []byte("# TIMEBOMB(2099-01-01): stdin bomb.\n")
+	out, _, err := runCLIStdin(t, in, "scan", "--stdin", "--at-time", "2026-04-13", "--stdin-filename", "pipe.py")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "stdin bomb.") {
+		t.Errorf("stdin bomb not found:\n%s", out)
+	}
+	if !strings.Contains(out, "pipe.py") {
+		t.Errorf("stdin-filename not used:\n%s", out)
+	}
+}
+
+func TestCLI_StdinConflictsWithChangedOnly(t *testing.T) {
+	_, _, err := runCLIStdin(t, []byte(""), "scan", "--stdin", "--changed-only")
+	if err == nil {
+		t.Errorf("expected mutual-exclusion error")
+	}
+}
+
+func TestCLI_Include(t *testing.T) {
+	dir := t.TempDir()
+	mustWrite(t, filepath.Join(dir, "keep.py"), "# TIMEBOMB(2099-01-01): keep.\n")
+	mustWrite(t, filepath.Join(dir, "skip.go"), "// TIMEBOMB(2099-01-01): skip.\n")
+
+	out, _, err := runCLI(t, "scan", dir, "--at-time", "2026-04-13", "--include", "**/*.py")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "skip.") {
+		t.Errorf("skip.go should not appear with include=*.py:\n%s", out)
+	}
+	if !strings.Contains(out, "keep.") {
+		t.Errorf("keep.py should appear:\n%s", out)
+	}
+}
+
+func TestCLI_ChangedOnly(t *testing.T) {
+	dir := t.TempDir()
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	git("init", "-q", "-b", "main")
+	git("config", "user.email", "t@t.test")
+	git("config", "user.name", "T")
+	git("commit", "--allow-empty", "-q", "-m", "initial")
+
+	mustWrite(t, filepath.Join(dir, "old.py"), "# TIMEBOMB(2099-01-01): old.\n")
+	git("add", "old.py")
+	git("commit", "-q", "-m", "old")
+
+	baseSHA, _ := exec.Command("git", "-C", dir, "rev-parse", "HEAD").Output()
+	base := strings.TrimSpace(string(baseSHA))
+
+	// Add a new file after base — this is the only "changed" file.
+	mustWrite(t, filepath.Join(dir, "new.py"), "# TIMEBOMB(2099-01-01): new.\n")
+
+	out, _, err := runCLI(t, "scan", dir,
+		"--at-time", "2026-04-13",
+		"--changed-only",
+		"--base", base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "new.") {
+		t.Errorf("new.py should appear:\n%s", out)
+	}
+	if strings.Contains(out, "old.") {
+		t.Errorf("old.py (unchanged vs base) should NOT appear:\n%s", out)
 	}
 }

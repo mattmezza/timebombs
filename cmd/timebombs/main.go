@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -44,7 +45,12 @@ type scanFlags struct {
 	ticking     bool
 	maxExploded int
 	exclude     []string
+	include     []string
 	noGitignore bool
+	changedOnly bool
+	base        string
+	stdin       bool
+	stdinName   string
 }
 
 func newRootCmd() *cobra.Command {
@@ -95,7 +101,12 @@ func attachScanFlags(cmd *cobra.Command, f *scanFlags) {
 	cmd.Flags().BoolVar(&f.ticking, "ticking", false, "Only show ticking bombs")
 	cmd.Flags().IntVar(&f.maxExploded, "max-exploded", -1, "Exit non-zero if more than N bombs are exploded")
 	cmd.Flags().StringSliceVar(&f.exclude, "exclude", nil, "Exclude glob (doublestar; repeatable)")
+	cmd.Flags().StringSliceVar(&f.include, "include", nil, "Only scan files matching this glob (doublestar; repeatable)")
 	cmd.Flags().BoolVar(&f.noGitignore, "no-gitignore", false, "Ignore .gitignore when walking")
+	cmd.Flags().BoolVar(&f.changedOnly, "changed-only", false, "Scan only files changed vs --base (committed, staged, unstaged, untracked)")
+	cmd.Flags().StringVar(&f.base, "base", "origin/main", "Base ref for --changed-only")
+	cmd.Flags().BoolVar(&f.stdin, "stdin", false, "Read a single file from stdin instead of walking paths")
+	cmd.Flags().StringVar(&f.stdinName, "stdin-filename", "<stdin>", "Display name used for --stdin results")
 }
 
 type initFlags struct {
@@ -221,11 +232,26 @@ func runScan(cmd *cobra.Command, args []string, f scanFlags) error {
 	if f.exploded && f.ticking {
 		return fmt.Errorf("--exploded and --ticking are mutually exclusive")
 	}
+	if f.stdin && f.changedOnly {
+		return fmt.Errorf("--stdin and --changed-only are mutually exclusive")
+	}
 
-	bombs, err := scanner.Scan(paths, scanner.Options{
+	opts := scanner.Options{
 		Exclude:      f.exclude,
+		Include:      f.include,
 		UseGitignore: !f.noGitignore,
-	})
+	}
+
+	var bombs []model.Timebomb
+	var err error
+	switch {
+	case f.stdin:
+		bombs, err = scanStdin(cmd.InOrStdin(), f.stdinName)
+	case f.changedOnly:
+		bombs, err = scanChangedOnly(paths, f.base, opts)
+	default:
+		bombs, err = scanner.Scan(paths, opts)
+	}
 	if err != nil {
 		return fmt.Errorf("scan: %w", err)
 	}
@@ -275,6 +301,62 @@ func runScan(cmd *cobra.Command, args []string, f scanFlags) error {
 		return errThresholdExceeded
 	}
 	return nil
+}
+
+// scanStdin reads a single file's contents from r and parses it. filename is
+// used as the display path in results.
+func scanStdin(r io.Reader, filename string) ([]model.Timebomb, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("read stdin: %w", err)
+	}
+	bombs := scanner.Parse(data)
+	for i := range bombs {
+		bombs[i].File = filename
+	}
+	return bombs, nil
+}
+
+// scanChangedOnly resolves the list of files changed vs base (from the first
+// path arg that is a git repo; defaults to cwd) and scans each of them.
+// Include/Exclude globs still apply; the globs are evaluated relative to the
+// repo root.
+func scanChangedOnly(paths []string, base string, opts scanner.Options) ([]model.Timebomb, error) {
+	repoRoot := "."
+	if len(paths) > 0 {
+		repoRoot = paths[0]
+	}
+	files, err := scanner.ChangedFiles(repoRoot, base)
+	if err != nil {
+		return nil, err
+	}
+	var out []model.Timebomb
+	for _, rel := range files {
+		if scanner.MatchAny(opts.Exclude, rel) {
+			continue
+		}
+		if len(opts.Include) > 0 && !scanner.MatchAny(opts.Include, rel) {
+			continue
+		}
+		abs := filepath.Join(repoRoot, rel)
+		if fi, err := os.Stat(abs); err != nil || !fi.Mode().IsRegular() {
+			// Deleted / non-regular — skip.
+			continue
+		}
+		bombs, err := scanner.Scan([]string{abs}, scanner.Options{
+			// gitignore/include/exclude already applied above; keep defaults here.
+			MaxFileSize: opts.MaxFileSize,
+		})
+		if err != nil {
+			return nil, err
+		}
+		// Rewrite File to the repo-relative path for nicer output.
+		for i := range bombs {
+			bombs[i].File = filepath.ToSlash(rel)
+		}
+		out = append(out, bombs...)
+	}
+	return out, nil
 }
 
 func render(w io.Writer, bombs []model.Timebomb, format string, now time.Time) error {
