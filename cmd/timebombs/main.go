@@ -14,10 +14,13 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 
+	"context"
+
 	"github.com/mattmezza/timebombs/internal/initcmd"
 	"github.com/mattmezza/timebombs/internal/model"
 	"github.com/mattmezza/timebombs/internal/output"
 	"github.com/mattmezza/timebombs/internal/scanner"
+	"github.com/mattmezza/timebombs/internal/upgrade"
 )
 
 // version is set via ldflags at release.
@@ -63,6 +66,7 @@ func newRootCmd() *cobra.Command {
 
 	root.AddCommand(newScanCmd())
 	root.AddCommand(newInitCmd())
+	root.AddCommand(newUpgradeCmd())
 	root.AddCommand(newVersionCmd())
 
 	// Default: if args look like paths and first isn't a known command,
@@ -195,6 +199,98 @@ func runInit(cmd *cobra.Command, f initFlags) error {
 			fmt.Fprintf(out, "  created  CI workflow  %s\n", res.Path)
 		}
 	}
+	return nil
+}
+
+type upgradeFlags struct {
+	version string
+	force   bool
+	check   bool
+}
+
+func newUpgradeCmd() *cobra.Command {
+	var f upgradeFlags
+	cmd := &cobra.Command{
+		Use:   "upgrade",
+		Short: "Download the latest release and replace the running binary.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runUpgrade(cmd, f)
+		},
+	}
+	cmd.Flags().StringVar(&f.version, "version", "", "Install this specific tag (e.g. v0.3.0) instead of latest")
+	cmd.Flags().BoolVar(&f.force, "force", false, "Reinstall even if already up to date")
+	cmd.Flags().BoolVar(&f.check, "check", false, "Print current vs latest version and exit without installing")
+	return cmd
+}
+
+func runUpgrade(cmd *cobra.Command, f upgradeFlags) error {
+	out := cmd.OutOrStdout()
+	ctx, cancel := context.WithTimeout(cmd.Context(), 2*time.Minute)
+	defer cancel()
+
+	c := upgrade.NewClient()
+	var rel *upgrade.Release
+	var err error
+	if f.version != "" {
+		rel, err = c.ByTag(ctx, f.version)
+	} else {
+		rel, err = c.Latest(ctx)
+	}
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(out, "Current: %s\n", version)
+	fmt.Fprintf(out, "Latest:  %s\n", rel.TagName)
+
+	if f.check {
+		if upgrade.NeedsUpgrade(version, rel.TagName) {
+			fmt.Fprintln(out, "An upgrade is available.")
+		} else {
+			fmt.Fprintln(out, "Already up to date.")
+		}
+		return nil
+	}
+
+	if !f.force && !upgrade.NeedsUpgrade(version, rel.TagName) {
+		fmt.Fprintln(out, "Already up to date. Use --force to reinstall.")
+		return nil
+	}
+
+	asset, err := upgrade.AssetFor(rel, upgrade.GOOS, upgrade.GOARCH)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Downloading %s …\n", asset.Name)
+
+	body, err := c.Download(ctx, asset)
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+
+	tmpDir, err := os.MkdirTemp("", "timebombs-upgrade-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+	newBin := filepath.Join(tmpDir, "timebombs")
+	if err := upgrade.ExtractBinary(body, asset.Name, newBin); err != nil {
+		return err
+	}
+	if err := upgrade.Verify(ctx, newBin); err != nil {
+		return fmt.Errorf("new binary failed verification: %w", err)
+	}
+
+	exePath, err := upgrade.ExePath()
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Replacing %s …\n", exePath)
+	if err := upgrade.ReplaceSelf(exePath, newBin); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Upgraded to %s.\n", rel.TagName)
 	return nil
 }
 

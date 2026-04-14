@@ -35,6 +35,19 @@ Grab the latest binary for your platform from the [releases page](https://github
 go install github.com/mattmezza/timebombs/cmd/timebombs@latest
 ```
 
+### Self-upgrade
+
+Once installed, upgrade in place:
+
+```bash
+timebombs upgrade            # upgrade to the latest release
+timebombs upgrade --check    # show current vs latest; do nothing
+timebombs upgrade --version v0.3.0  # pin a specific tag (including downgrade)
+timebombs upgrade --force    # reinstall the same version
+```
+
+The upgrade checks GitHub for the latest release, downloads the matching archive for your OS/arch, verifies the new binary runs, and atomically replaces the running executable. If the install directory is system-owned (e.g. `/usr/local/bin`), re-run with `sudo`.
+
 ## Quickstart
 
 Annotate your code:
