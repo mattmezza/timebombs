@@ -140,7 +140,10 @@ func runInit(cmd *cobra.Command, f initFlags) error {
 	if f.list {
 		fmt.Fprintln(out, "Supported agents:")
 		for _, a := range initcmd.ListAgents() {
-			fmt.Fprintf(out, "  %-12s  %s\n    target: %s\n", a.ID, a.DisplayName, a.Target)
+			fmt.Fprintf(out, "  %-12s  %s\n", a.ID, a.DisplayName)
+			for _, t := range a.Targets {
+				fmt.Fprintf(out, "    target: %s\n", t.Path)
+			}
 		}
 		return nil
 	}
@@ -169,13 +172,15 @@ func runInit(cmd *cobra.Command, f initFlags) error {
 		if err != nil {
 			return fmt.Errorf("install %s: %w", a.ID, err)
 		}
-		switch {
-		case res.Skipped:
-			fmt.Fprintf(out, "  skipped  %s (already installed: %s)\n", a.DisplayName, res.Path)
-		case res.Created:
-			fmt.Fprintf(out, "  created  %s  %s\n", a.DisplayName, res.Path)
-		default:
-			fmt.Fprintf(out, "  appended %s  %s\n", a.DisplayName, res.Path)
+		for _, tr := range res.Targets {
+			switch {
+			case tr.Skipped:
+				fmt.Fprintf(out, "  skipped  %s (already installed: %s)\n", a.DisplayName, tr.Path)
+			case tr.Created:
+				fmt.Fprintf(out, "  created  %s  %s\n", a.DisplayName, tr.Path)
+			default:
+				fmt.Fprintf(out, "  appended %s  %s\n", a.DisplayName, tr.Path)
+			}
 		}
 	}
 

@@ -43,26 +43,46 @@ func TestDetectInstalled_Multiple(t *testing.T) {
 	}
 }
 
-func TestInstall_DedicatedFile(t *testing.T) {
+func TestInstall_ClaudeCode_WritesTwoSkillFiles(t *testing.T) {
 	dir := t.TempDir()
 	a, _ := Lookup("claude-code")
 	res, err := InstallForAgent(dir, a)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !res.Created {
-		t.Errorf("expected Created=true, got %+v", res)
+	if len(res.Targets) != 2 {
+		t.Fatalf("want 2 targets, got %d", len(res.Targets))
 	}
-	data, err := os.ReadFile(filepath.Join(dir, ".claude/timebombs.md"))
+	for _, tr := range res.Targets {
+		if !tr.Created {
+			t.Errorf("expected Created=true for %s: %+v", tr.Path, tr)
+		}
+	}
+
+	planting := filepath.Join(dir, ".claude/skills/timebombs-planting/SKILL.md")
+	scanning := filepath.Join(dir, ".claude/skills/timebombs-scanning/SKILL.md")
+
+	pData, err := os.ReadFile(planting)
 	if err != nil {
-		t.Fatalf("target file not written: %v", err)
+		t.Fatalf("planting skill: %v", err)
 	}
-	if !strings.Contains(string(data), "## Timebombs") {
-		t.Errorf("missing delimiter heading")
+	if !strings.Contains(string(pData), "name: timebombs-planting") {
+		t.Errorf("planting missing frontmatter name:\n%s", pData)
+	}
+	if !strings.HasPrefix(string(pData), "---\n") {
+		t.Errorf("planting should start with frontmatter delimiter")
+	}
+
+	sData, err := os.ReadFile(scanning)
+	if err != nil {
+		t.Fatalf("scanning skill: %v", err)
+	}
+	if !strings.Contains(string(sData), "name: timebombs-scanning") {
+		t.Errorf("scanning missing frontmatter name:\n%s", sData)
 	}
 }
 
-func TestInstall_DedicatedFile_Idempotent(t *testing.T) {
+func TestInstall_ClaudeCode_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	a, _ := Lookup("claude-code")
 	if _, err := InstallForAgent(dir, a); err != nil {
@@ -72,8 +92,10 @@ func TestInstall_DedicatedFile_Idempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !res.Skipped {
-		t.Errorf("second install should be skipped, got %+v", res)
+	for _, tr := range res.Targets {
+		if !tr.Skipped {
+			t.Errorf("target %s should be skipped on re-run: %+v", tr.Path, tr)
+		}
 	}
 }
 
@@ -84,8 +106,12 @@ func TestInstall_AppendNewFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !res.Created {
-		t.Errorf("expected Created=true, got %+v", res)
+	if len(res.Targets) != 1 {
+		t.Fatalf("want 1 target, got %d", len(res.Targets))
+	}
+	tr := res.Targets[0]
+	if !tr.Created {
+		t.Errorf("expected Created=true, got %+v", tr)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, ".github/copilot-instructions.md"))
 	if !strings.Contains(string(data), "## Timebombs") {
@@ -104,8 +130,9 @@ func TestInstall_AppendExistingFile_Idempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Created || res.Skipped {
-		t.Errorf("want append-to-existing (not created, not skipped): %+v", res)
+	tr := res.Targets[0]
+	if tr.Created || tr.Skipped {
+		t.Errorf("want append-to-existing: %+v", tr)
 	}
 	data, _ := os.ReadFile(target)
 	if !strings.Contains(string(data), "Do things carefully") {
@@ -115,15 +142,29 @@ func TestInstall_AppendExistingFile_Idempotent(t *testing.T) {
 		t.Errorf("did not append skill:\n%s", data)
 	}
 
-	// Second run is a no-op.
 	res2, _ := InstallForAgent(dir, a)
-	if !res2.Skipped {
-		t.Errorf("second install should skip: %+v", res2)
+	if !res2.Targets[0].Skipped {
+		t.Errorf("second install should skip: %+v", res2.Targets[0])
 	}
-	// Content should not have been appended again.
 	data2, _ := os.ReadFile(target)
 	if strings.Count(string(data2), "## Timebombs") != 1 {
-		t.Errorf("heading duplicated on re-run:\n%s", data2)
+		t.Errorf("heading duplicated:\n%s", data2)
+	}
+}
+
+func TestInstall_OpenCode_DedicatedSharedContent(t *testing.T) {
+	dir := t.TempDir()
+	a, _ := Lookup("opencode")
+	_, err := InstallForAgent(dir, a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, ".opencode/agents/timebombs.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "## Timebombs") {
+		t.Errorf("missing heading:\n%s", data)
 	}
 }
 
@@ -144,7 +185,6 @@ func TestInstallCI_GitHubActions(t *testing.T) {
 		t.Errorf("workflow missing scan cmd:\n%s", data)
 	}
 
-	// Idempotent.
 	res2, _ := InstallCI(dir, "github-actions")
 	if !res2.Skipped {
 		t.Errorf("second CI install should skip: %+v", res2)

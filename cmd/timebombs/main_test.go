@@ -184,8 +184,13 @@ func TestCLI_InitAgent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".claude/timebombs.md")); err != nil {
-		t.Errorf("expected skill file: %v", err)
+	for _, rel := range []string{
+		".claude/skills/timebombs-planting/SKILL.md",
+		".claude/skills/timebombs-scanning/SKILL.md",
+	} {
+		if _, err := os.Stat(filepath.Join(dir, rel)); err != nil {
+			t.Errorf("expected skill file %s: %v", rel, err)
+		}
 	}
 }
 
