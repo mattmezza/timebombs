@@ -12,6 +12,19 @@ In the era of AI coding agents shipping at unprecedented velocity, teams need a 
 
 ## Install
 
+### One-liner (Linux / macOS)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mattmezza/timebombs/main/install.sh | bash
+```
+
+Auto-detects OS/arch and drops the binary in `/usr/local/bin` (falling back to `~/.local/bin` if the system dir isn't writable). Override with env vars:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mattmezza/timebombs/main/install.sh | VERSION=v0.4.0 bash
+curl -fsSL https://raw.githubusercontent.com/mattmezza/timebombs/main/install.sh | INSTALL_DIR=$HOME/bin bash
+```
+
 ### Binary releases
 
 Grab the latest binary for your platform from the [releases page](https://github.com/mattmezza/timebombs/releases).
