@@ -15,7 +15,8 @@ lint:
 	golangci-lint run
 
 fmt:
-	gofmt -s -w .
+	# Format only buildable Go packages so testdata/ fixtures stay intact.
+	gofmt -s -w $(shell go list -f '{{.Dir}}' ./...)
 
 install:
 	go install -ldflags "$(LDFLAGS)" $(PKG)
