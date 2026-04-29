@@ -11,6 +11,9 @@ import (
 
 // bombRe matches a TIMEBOMB(deadline[, id]): description annotation.
 // Description runs to end of line; multi-line handling is done above.
+// bombRe matches a TIMEBOMB(deadline[, id]): description annotation.
+// Description runs to end of line; multi-line handling is done above.
+// (?s) lets . match newlines for inline block comments that close on same line.
 var bombRe = regexp.MustCompile(`TIMEBOMB\((\d{4}-\d{2}-\d{2})(?:\s*,\s*([^)]*?))?\s*\)\s*:\s*(.*)$`)
 
 // Parse extracts timebombs from a single file's contents.
@@ -137,6 +140,8 @@ func classify(lines []string) []lineInfo {
 
 		var prefix string
 		switch {
+		case strings.HasPrefix(trimmedL, "{#"):
+			prefix = "{#"
 		case strings.HasPrefix(trimmedL, "//"):
 			prefix = "//"
 		case strings.HasPrefix(trimmedL, "/*"):
@@ -163,10 +168,13 @@ func classify(lines []string) []lineInfo {
 		inner := trimmedL[len(prefix):]
 		innerCol := leading + len(prefix)
 
-		if prefix == "/*" || prefix == "{-" {
+		if prefix == "/*" || prefix == "{-" || prefix == "{#" {
 			closeTok := "*/"
 			if prefix == "{-" {
 				closeTok = "-}"
+			}
+			if prefix == "{#" {
+				closeTok = "#}"
 			}
 			blockID++
 			thisBlock := blockID
