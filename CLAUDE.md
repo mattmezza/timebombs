@@ -61,9 +61,9 @@ The `TIMEBOMB(...)` marker starts the annotation. Any immediately following comm
 
 ### Comment style support
 
-The scanner must recognize these comment prefixes: `//`, `#`, `--`, `/*...*/`, `{-...-}`, `%`, `;;`, `rem`, `'` (VB). The parser strips the comment prefix before matching the `TIMEBOMB(` pattern.
+The scanner must recognize these comment prefixes: `//`, `#`, `--`, `/*...*/`, `{-...-}`, `{#...#}`, `%`, `;;`, `rem`, `'` (VB). The parser strips the comment prefix before matching the `TIMEBOMB(` pattern.
 
-For block comments (`/* */`, `{- -}`), continuation lines may be prefixed with `*` or whitespace only (no repeated comment marker). The block comment closing token ends the annotation.
+For block comments (`/* */`, `{- -}`, `{# #}`), continuation lines may be prefixed with `*` or whitespace only (no repeated comment marker). The block comment closing token ends the annotation.
 
 ### What is NOT a timebomb
 

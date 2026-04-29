@@ -220,6 +220,34 @@ func TestParse_MissingColonIgnored(t *testing.T) {
 	}
 }
 
+func TestParse_JinjaSingleLine(t *testing.T) {
+	src := `{# TIMEBOMB(2025-09-01): Drop legacy template. #}`
+	got := Parse([]byte(src))
+	if len(got) != 1 {
+		t.Fatalf("got %d bombs, want 1", len(got))
+	}
+	if got[0].Deadline.Format("2006-01-02") != "2025-09-01" {
+		t.Errorf("deadline: got %s", got[0].Deadline.Format("2006-01-02"))
+	}
+	if got[0].Description != "Drop legacy template." {
+		t.Errorf("desc: got %q", got[0].Description)
+	}
+}
+
+func TestParse_JinjaMultiLine(t *testing.T) {
+	src := `{# TIMEBOMB(2025-09-01): Drop legacy template.
+   This template is replaced by v2.
+   All callers have been migrated. #}`
+	got := Parse([]byte(src))
+	if len(got) != 1 {
+		t.Fatalf("got %d bombs, want 1", len(got))
+	}
+	if !strings.Contains(got[0].Description, "Drop legacy template") ||
+		!strings.Contains(got[0].Description, "callers have been migrated") {
+		t.Errorf("desc missing content: %q", got[0].Description)
+	}
+}
+
 func TestParse_BlockStarStripped(t *testing.T) {
 	src := `/*
  * TIMEBOMB(2025-10-10): javadoc style.
